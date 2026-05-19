@@ -15,25 +15,28 @@ public class StartMenuUI : MonoBehaviour
 
     private void OnNameInputChanged(string text)
     {
+        string playerName = nameInputField.text;
+
         if (string.IsNullOrEmpty(text)) return;
 
-        if (SaveSystem.Instance != null)
-        {
-            int score = SaveSystem.Instance.GetHighScoreByName(text);
+        GameData data = SaveSystem.LoadGame();
 
-            if (score > 0)
-            {
-                bestScoreText.text = "Best score: " + nameInputField.text + ": " + score;
-            }
-        }
+        PlayerRecord record = data.playerRecords.Find(p => p.playerName.Equals(playerName, System.StringComparison.OrdinalIgnoreCase));
+
+        int savedScore = (record != null) ? record.highScore : 0;
+        bestScoreText.text = "Best Score: " + nameInputField.text + ": " + savedScore;
     }
 
     public void StartGame()
     {
-        if (string.IsNullOrEmpty(nameInputField.text)) return;
+        string playerName = nameInputField.text;
+        if (string.IsNullOrEmpty(playerName))
+        {
+            playerName = "Guest";
+        }
 
-        SaveSystem.Instance.currentPlayerName = nameInputField.text;
-        SaveSystem.Instance.currenScore = 0;
+        PlayerPrefs.SetString("CurrentPlayerName", playerName);
+        PlayerPrefs.Save();
 
         SceneManager.LoadScene(1);
     }

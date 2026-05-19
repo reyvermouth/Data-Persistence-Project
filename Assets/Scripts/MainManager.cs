@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Overlays;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -16,17 +13,26 @@ public class MainManager : MonoBehaviour
     
     private bool m_Started = false;
     private int m_Points;
-    private string m_Name;
     private bool m_GameOver = false;
-
+    private string currentPlayer;
+    private GameData gameData;
+    private PlayerRecord currentPlayerRecord;
     
     // Start is called before the first frame update
     void Start()
     {
-        m_Name = SaveSystem.Instance.currentPlayerName;
-        m_Points = SaveSystem.Instance.currenScore;
+        currentPlayer = PlayerPrefs.GetString("CurrentPlayerName", "Guest");
 
-        bestScoreText.text = "Best Score: " + m_Name + ": " + m_Points;
+        gameData = SaveSystem.LoadGame();
+        currentPlayerRecord = gameData.playerRecords.Find(p => p.playerName.Equals(currentPlayer, System.StringComparison.OrdinalIgnoreCase));
+
+        if (currentPlayerRecord == null )
+        {
+            currentPlayerRecord = new PlayerRecord { playerName = currentPlayer, highScore = 0 };
+            gameData.playerRecords.Add(currentPlayerRecord);
+        }
+
+        UpdateHighScoreUI();
 
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
@@ -74,9 +80,36 @@ public class MainManager : MonoBehaviour
         ScoreText.text = $"Score : {m_Points}";
     }
 
+    private void UpdateHighScoreUI()
+    {
+        if (gameData.playerRecords.Count == 0) return;
+
+        PlayerRecord topPlayer = gameData.playerRecords[0];
+        foreach (PlayerRecord playerRecord in gameData.playerRecords)
+        {
+            if (playerRecord.highScore >  topPlayer.highScore)
+            {
+                topPlayer = playerRecord;
+            }
+        }
+
+        bestScoreText.text = "Best Score: " + topPlayer.playerName + ": " + topPlayer.highScore;
+    }
+
+    public void CheckAndSaveNewScore(int finalScore)
+    {
+        if (finalScore > currentPlayerRecord.highScore)
+        {
+            currentPlayerRecord.highScore = finalScore;
+            SaveSystem.SaveGame(gameData);
+
+            UpdateHighScoreUI();
+        }
+    }
+
     public void GameOver()
     {
-        SaveSystem.Instance.SaveHighScore(m_Name, m_Points);
+        CheckAndSaveNewScore(m_Points);
         m_GameOver = true;
         GameOverText.SetActive(true);
     }
